@@ -29,6 +29,18 @@ The build script provided produces binaries for sys-nxlink and the custom nx-hbl
 
 ```./build.sh```
 
+Copy `main` and `main.npdm` to `sdmc:/atmosphere/titles/010000000000100D/exefs/`
+Copy `sys-nxlink.kip` to `sdmc:/modules/`
+Edit `hekate_ipl.ini` and add
+```
+[NXLINK + CFW]
+kip1=modules/sys-nxlink.kip
+kip1=modules/newfirm/loader.kip
+kip1=modules/newfirm/sm.kip
+```
+as a new section
+
+
 ## Todo (after release)
 
 Fix looping
