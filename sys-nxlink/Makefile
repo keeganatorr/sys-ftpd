@@ -7,7 +7,7 @@ endif
 TOPDIR ?= $(CURDIR)
 include $(DEVKITPRO)/libnx/switch_rules
 
-TARGET		:=	sys-ftpd
+TARGET		:=	sys-nxlink
 BUILD		:=	build
 SOURCES		:=	source
 DATA		:=	data

@@ -7,20 +7,26 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include "console.h"
-#include "ftp.h"
+#include "netloader.h"
+#include "common.h"
+//#include "netloader.h"
 
 #include <switch.h>
 
 #include "util.h"
 
-#define TITLE_ID 0x420000000000000E
-#define HEAP_SIZE 0x0001A0000 //0x000540000
+#define ERPT_SAVE_ID 0x80000000000000D1
+#define TITLE_ID 0x4200000000000001
+#define HEAP_SIZE 0x000540000 //0x000540000
 
 // we aren't an applet
 u32 __nx_applet_type = AppletType_None;
 
 // setup a fake heap (we don't need the heap anyway)
 char fake_heap[HEAP_SIZE];
+
+extern void* __stack_top;//Defined in libnx.
+#define STACK_SIZE 0x100000 //Change this if main-thread stack size ever changes.
 
 // we override libnx internals to do a minimal init
 void __libnx_initheap(void)
@@ -33,23 +39,6 @@ void __libnx_initheap(void)
     fake_heap_end = fake_heap + HEAP_SIZE;
 }
 
-void registerFspLr() {
-    if (kernelAbove400())
-        return;
-
-    Result rc = fsprInitialize();
-    if (R_FAILED(rc))
-        fatalLater(rc);
-
-    u64 pid;
-    svcGetProcessId(&pid, CUR_PROCESS_HANDLE);
-
-    rc = fsprRegisterProgram(pid, TITLE_ID, FsStorageId_NandSystem, NULL, 0, NULL, 0);
-    if (R_FAILED(rc))
-        fatalLater(rc);
-    fsprExit();
-}
-
 void __appInit(void)
 {
     Result rc;
@@ -60,7 +49,6 @@ void __appInit(void)
     rc = fsInitialize();
     if (R_FAILED(rc))
         fatalLater(rc);
-    registerFspLr();
     rc = fsdevMountSdmc();
     if (R_FAILED(rc))
         fatalLater(rc);
@@ -86,7 +74,6 @@ static loop_status_t loop(loop_status_t (*callback)(void))
     {
         svcSleepThread(30000000L);
         status = callback();
-        console_render();
         if (status != LOOP_CONTINUE)
             return status;
     }
@@ -99,24 +86,36 @@ int main(int argc, char **argv)
     (void)argv;
 
     mkdir("/logs", 0700);
-    unlink("/logs/ftpd.log");
+    FILE *f = fopen("/logs/nxlink.log", "a");
+    stdout = f;
+    stderr = f;
+    printf("\n---------------------------------\n");
+
+    printf("Start!\n");
 
     loop_status_t status = LOOP_RESTART;
 
     while (status == LOOP_RESTART)
     {
-        /* initialize ftp subsystem */
-        if (ftp_init() == 0)
+        if (netloader_activate() == 0) // only run once.
         {
-            /* ftp loop */
-            loop(ftp_loop);
+            printf("Server Active!\n");
+            status = loop(netloader_loop);
 
-            /* done with ftp */
-            ftp_exit();
+            netloader_deactivate();
         }
         else
+        {
+            printf("Server Inactive!\n");
             status = LOOP_EXIT;
+        }
     }
+
+    printf("End Loop!\n");
+
+    printf("Done!\n");
+
+    fclose(f);
 
     return 0;
 }

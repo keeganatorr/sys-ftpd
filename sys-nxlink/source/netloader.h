@@ -8,6 +8,7 @@ typedef enum
   LOOP_EXIT,     /*!< Terminate looping */
 } loop_status_t;
 
-int           ftp_init(void);
-loop_status_t ftp_loop(void);
-void          ftp_exit(void);
+//int loadnro(fileHolder *me, int sock, struct in_addr remote);
+int           netloader_activate(void);
+loop_status_t netloader_loop(void);
+void          netloader_deactivate(void);
